@@ -55,17 +55,27 @@ exports.addIngredient = async (req, res) => {
       return res.status(404).json({ message: "Ingredient not found" });
     }
 
-    item.extraIngredients.push({
-      ingredientId,
-      price: ingredient.price
-    });
+    const existingIngredientIndex = item.extraIngredients.findIndex(
+      (ext) => ext.ingredientId.toString() === ingredientId.toString()
+    );
+
+    if (existingIngredientIndex > -1) {
+      // Ingredient already added, so remove it
+      item.extraIngredients.splice(existingIngredientIndex, 1);
+    } else {
+      // Ingredient not added, so add it
+      item.extraIngredients.push({
+        ingredientId,
+        price: ingredient.price
+      });
+    }
 
     const pizza = await Pizza.findById(item.pizzaId);
 
-    item.totalPrice = calculatePrice(
-      pizza.price,
-      item.extraIngredients
-    );
+    const basePizzaPriceTotal = pizza.price * item.quantity;
+    const ingredientsPriceTotal = calculatePrice(0, item.extraIngredients); // Use helper just for ingredients
+
+    item.totalPrice = basePizzaPriceTotal + ingredientsPriceTotal;
 
     await cart.save();
 
